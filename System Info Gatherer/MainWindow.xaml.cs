@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Management;
 using System.Windows;
+using WUApiInterop;
 
 namespace System_Info_Gatherer
 {
@@ -152,35 +153,28 @@ namespace System_Info_Gatherer
 
         public void GetWindowsUpdates(StreamWriter writer)
         {
-            writer.WriteLine("- Installed Windows Updates:");
+            writer.WriteLine("- Windows Update History:");
 
-            string query = "SELECT Caption, Description, HotFixID, InstalledBy, InstalledOn FROM Win32_QuickFixEngineering";
-            ManagementObjectCollection resultCollection = null;
-            try
+            UpdateSession updateSession = new UpdateSession();
+            IUpdateSearcher updateSearcher = updateSession.CreateUpdateSearcher();
+            IUpdateHistoryEntryCollection updateHistoryCollection = updateSearcher.QueryHistory(0, updateSearcher.GetTotalHistoryCount());
+            foreach (IUpdateHistoryEntry updateHistory in updateHistoryCollection)
             {
-                ManagementObjectSearcher search = new ManagementObjectSearcher(query);
-                resultCollection = search.Get();
-            }
-            catch (Exception error)
-            {
-                MessageBox.Show(error.Message);
-            }
+                if (updateHistory.Date == new DateTime(1899, 12, 30))
+                {
+                    continue;
+                }
 
-            foreach (ManagementObject result in resultCollection)
-            {
-                try
-                {
-                    writer.WriteLine("Caption: " + (result["Caption"] != null ? result["Caption"].ToString() : ""));
-                    writer.WriteLine("Description: " + (result["Description"] != null ? result["Description"].ToString() : ""));
-                    writer.WriteLine("HotFixID: " + (result["HotFixID"] != null ? result["HotFixID"].ToString() : ""));
-                    writer.WriteLine("InstalledBy: " + (result["InstalledBy"] != null ? result["InstalledBy"].ToString() : ""));
-                    writer.WriteLine("InstalledOn: " + (result["InstalledOn"] != null ? result["InstalledOn"].ToString() : ""));
-                    writer.WriteLine();
-                }
-                catch(Exception error)
-                {
-                    MessageBox.Show(error.Message);
-                }
+                writer.WriteLine("Date: " + updateHistory.Date.ToLongDateString() + " " + updateHistory.Date.ToLongTimeString());
+                writer.WriteLine("Title: " + (updateHistory.Title != null ? updateHistory.Title : ""));
+                writer.WriteLine("Description: " + (updateHistory.Description != null ? updateHistory.Description : ""));
+                writer.WriteLine("Operation: " + updateHistory.Operation);
+                writer.WriteLine("Result Code: " + updateHistory.ResultCode);
+                writer.WriteLine("Support URL: " + (updateHistory.SupportUrl != null ? updateHistory.SupportUrl : ""));
+                writer.WriteLine("Update ID: " + (updateHistory.UpdateIdentity.UpdateID != null ? updateHistory.UpdateIdentity.UpdateID : ""));
+                writer.WriteLine("Update Revision: " + (updateHistory.UpdateIdentity.RevisionNumber.ToString() != null ? updateHistory.UpdateIdentity.RevisionNumber.ToString() : ""));
+
+                writer.WriteLine();
             }
         }
     }

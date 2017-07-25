@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:System_Info_Gatherer"
         mc:Ignorable="d"
-        Title="System Information Gatherer v1.0" Height="350" Width="525">
+        Title="System Information Gatherer v1.1" Height="350" Width="525">
     <Grid>
         <ScrollViewer Margin="10,10,10,35" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" VerticalScrollBarVisibility="Auto">
             <TextBlock HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextWrapping="Wrap"><Run Text="This utility will gather information regarding your system that will be passed to authorized personnel within Swiftpage. Information gathered by this utility will not be shared with any third party"/><Run Text=" without your permission"/><Run Text="."/><Run Text=" You are free to view or share any information gathered by this utility as you see fit."/><LineBreak/><Run/><LineBreak/><Run Text="The utility will gather the following information from your computer:"/><LineBreak/><Run Text="- Windows version"/><LineBreak/><Run Text="- Hardware configuration"/><LineBreak/><Run Text="- Region and Language settings"/><LineBreak/><Run Text="- Installed .NET Framework versions"/><LineBreak/><Run Text="- Installed Windows updates"/><LineBreak/><Run/><LineBreak/><Run Text="This utility is intended for use only by personnel authorized by Swiftpage. Use of this utility without authorization is done at your own risk."/></TextBlock>
