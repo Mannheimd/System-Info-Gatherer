@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Management;
@@ -27,6 +28,7 @@ namespace System_Info_Gatherer
             {
                 GetWindowsVersion(writer);
                 GetSystemInformation(writer);
+                GetOfficeVersions(writer);
                 GetDotNetVersions(writer);
                 GetWindowsUpdates(writer);
 
@@ -96,6 +98,46 @@ namespace System_Info_Gatherer
             writer.WriteLine("Time Zone: " + (TimeZone.CurrentTimeZone.IsDaylightSavingTime(DateTime.Now) ? TimeZone.CurrentTimeZone.DaylightName : TimeZone.CurrentTimeZone.StandardName));
 
             writer.WriteLine();
+        }
+
+        public void GetOfficeVersions(StreamWriter writer)
+        {
+            writer.WriteLine("- Installed Office Versions:");
+
+            RegistryKey localMachine = Registry.LocalMachine;
+            RegistryKey software32BitKey = localMachine.OpenSubKey(@"Software\Microsoft\Office", false);
+            RegistryKey software64BitKey = localMachine.OpenSubKey(@"Software\WOW6432Node\Microsoft\Office", false);
+
+            foreach (KeyValuePair<string, string> officeVersion in OfficeVersions.versionNumbers)
+            {
+                try
+                {
+                    RegistryKey versionKey = software32BitKey.OpenSubKey(officeVersion.Key, false);
+                    if (versionKey != null)
+                    {
+                        writer.WriteLine(officeVersion.Value);
+                        writer.WriteLine("Reg Path: " + versionKey.ToString());
+
+                        string[] versionSubKeys = versionKey.GetSubKeyNames();
+                        foreach (string versionSubKey in versionSubKeys)
+                        {
+                            if (OfficeVersions.productNames.ContainsKey(versionSubKey))
+                            {
+                                string exeName = OfficeVersions.productNames[versionSubKey];
+                                try
+                                {
+                                    RegistryKey productInstallRoot = versionKey.OpenSubKey(versionSubKey + @"\InstallRoot");
+                                    string installRootPath = productInstallRoot.GetValue("Path").ToString() + exeName;
+
+                                    MessageBox.Show(productInstallRoot.ToString());
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
         }
 
         public void GetDotNetVersions(StreamWriter writer)
@@ -177,5 +219,52 @@ namespace System_Info_Gatherer
                 writer.WriteLine();
             }
         }
+    }
+
+    public class OfficeVersions
+    {
+        public static Dictionary<string, string> versionNumbers = new Dictionary<string, string>
+        {
+            { "1.0", "Office 1.0" },
+            { "1.5", "Office 1.5" },
+            { "1.6", "Office 1.6" },
+            { "3.0", "Office 3.0" },
+            { "4.0", "Office 4.0" },
+            { "4.2", "Office for NT 4.2" },
+            { "4.3", "Office 4.3" },
+            { "7.0", "Office 95" },
+            { "8.0", "Office 97" },
+            { "8.5", "Office 97 Powered by Word 98" },
+            { "9.0", "Office 2000" },
+            { "10.0", "Office XP" },
+            { "11.0", "Office 2003" },
+            { "12.0", "Office 2007" },
+            { "14.0", "Office 2010" },
+            { "15.0", "Office 2013" },
+            { "16.0", "Office 2016" }
+        };
+
+        public static Dictionary<string, string> productNames = new Dictionary<string, string>
+        {
+            { "Word", "winword.exe" },
+            { "Excel", "excel.exe" },
+            { "Outlook", "outlook.exe" },
+            { "PowerPoint", "powerpnt.exe" },
+            { "Access", "msaccess.exe" },
+            { "Visio", "visio.exe" },
+            { "Project", "winproj.exe" },
+            { "Publisher", "mspub.exe" },
+            { "FrontPage", "frontpg.exe" },
+            { "Schedule+", "schdpl32.exe" },
+            { "PhotoDraw", "photodrw.exe" },
+            { "Binder", "binder.exe" },
+            { "Photo Editor", "photoed.exe" },
+            { "MapPoint Deluxe", "mappoint.exe" },
+            { "InfoPath", "infopath.exe" },
+            { "OneNote", "onenote.exe" },
+            { "Communicator", "communicator.exe" },
+            { "Groove/SharePoint Workspace/OneDrive", "groove.exe" },
+            { "SharePoint Designer", "spdesign.exe" },
+        };
     }
 }
