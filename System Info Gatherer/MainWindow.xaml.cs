@@ -1,8 +1,10 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Windows;
 using WUApiInterop;
 
@@ -27,12 +29,16 @@ namespace System_Info_Gatherer
             {
                 GetWindowsVersion(writer);
                 GetSystemInformation(writer);
+                GetOfficeVersions(writer);
                 GetDotNetVersions(writer);
                 GetWindowsUpdates(writer);
 
                 MessageBox.Show("Results exported to 'System Information Report.txt', which is on your desktop.");
             }
         }
+
+        [DllImport("kernel32.dll")]
+        static extern bool GetBinaryType(string lpApplicationName, out BinaryType lpBinaryType);
 
         public string HKLM_GetString(string path, string key)
         {
@@ -96,6 +102,134 @@ namespace System_Info_Gatherer
             writer.WriteLine("Time Zone: " + (TimeZone.CurrentTimeZone.IsDaylightSavingTime(DateTime.Now) ? TimeZone.CurrentTimeZone.DaylightName : TimeZone.CurrentTimeZone.StandardName));
 
             writer.WriteLine();
+        }
+
+        public void GetOfficeVersions(StreamWriter writer)
+        {
+            writer.WriteLine("- Installed Office Versions:");
+
+            RegistryKey localMachine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            RegistryKey software32BitKey = localMachine.OpenSubKey(@"Software\Microsoft\Office", false);
+            RegistryKey software64BitKey = localMachine.OpenSubKey(@"Software\WOW6432Node\Microsoft\Office", false);
+
+            foreach (KeyValuePair<string, string> officeVersion in OfficeVersions.versionNumbers)
+            {
+                try
+                {
+                    RegistryKey versionKey = software64BitKey.OpenSubKey(officeVersion.Key, false);
+                    if (versionKey != null)
+                    {
+                        writer.WriteLine(officeVersion.Value);
+                        writer.WriteLine("Reg Path: " + versionKey.ToString());
+
+                        string[] versionSubKeys = versionKey.GetSubKeyNames();
+                        bool applicationFound = false;
+                        foreach (string versionSubKey in versionSubKeys)
+                        {
+                            if (OfficeVersions.productNames.ContainsKey(versionSubKey))
+                            {
+                                applicationFound = true;
+                                writer.WriteLine("Application: " + versionSubKey);
+
+                                string exeName = OfficeVersions.productNames[versionSubKey];
+                                string installRootPath = null;
+                                try
+                                {
+                                    RegistryKey productInstallRoot = versionKey.OpenSubKey(versionSubKey + @"\InstallRoot");
+                                    installRootPath = productInstallRoot.GetValue("Path").ToString() + exeName;
+
+                                    writer.WriteLine("Location: " + installRootPath);
+                                }
+                                catch
+                                {
+                                    writer.WriteLine("Location: " + "Registry reference found, but no install path");
+                                }
+
+                                if (installRootPath != null)
+                                {
+                                    try
+                                    {
+                                        GetBinaryType(installRootPath, out BinaryType binType);
+                                        writer.WriteLine("Binary Type: " + binType);
+
+                                        writer.WriteLine();
+                                    }
+                                    catch
+                                    {
+                                        writer.WriteLine("Binary Type: " + "Type not found");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (applicationFound == false)
+                        {
+                            writer.WriteLine("No applications found for this version");
+                        }
+
+                        writer.WriteLine();
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    RegistryKey versionKey = software32BitKey.OpenSubKey(officeVersion.Key, false);
+                    if (versionKey != null)
+                    {
+                        writer.WriteLine(officeVersion.Value);
+                        writer.WriteLine("Reg Path: " + versionKey.ToString());
+
+                        string[] versionSubKeys = versionKey.GetSubKeyNames();
+                        bool applicationFound = false;
+                        foreach (string versionSubKey in versionSubKeys)
+                        {
+                            if (OfficeVersions.productNames.ContainsKey(versionSubKey))
+                            {
+                                applicationFound = true;
+                                writer.WriteLine("Application: " + versionSubKey);
+
+                                string exeName = OfficeVersions.productNames[versionSubKey];
+                                string installRootPath = null;
+                                try
+                                {
+                                    RegistryKey productInstallRoot = versionKey.OpenSubKey(versionSubKey + @"\InstallRoot");
+                                    installRootPath = productInstallRoot.GetValue("Path").ToString() + exeName;
+
+                                    writer.WriteLine("Location: " + installRootPath);
+                                }
+                                catch
+                                {
+                                    writer.WriteLine("Location: " + "Registry reference found, but no install path");
+                                }
+
+                                if (installRootPath != null)
+                                {
+                                    try
+                                    {
+                                        GetBinaryType(installRootPath, out BinaryType binType);
+                                        writer.WriteLine("Binary Type: " + binType);
+
+                                        writer.WriteLine();
+                                    }
+                                    catch
+                                    {
+                                        writer.WriteLine("Binary Type: " + "Type not found");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (applicationFound == false)
+                        {
+                            writer.WriteLine("No applications found for this version");
+                        }
+
+                        writer.WriteLine();
+                    }
+                }
+                catch { }
+            }
         }
 
         public void GetDotNetVersions(StreamWriter writer)
@@ -177,5 +311,63 @@ namespace System_Info_Gatherer
                 writer.WriteLine();
             }
         }
+    }
+
+    public class OfficeVersions
+    {
+        public static Dictionary<string, string> versionNumbers = new Dictionary<string, string>
+        {
+            { "1.0", "Office 1.0" },
+            { "1.5", "Office 1.5" },
+            { "1.6", "Office 1.6" },
+            { "3.0", "Office 3.0" },
+            { "4.0", "Office 4.0" },
+            { "4.2", "Office for NT 4.2" },
+            { "4.3", "Office 4.3" },
+            { "7.0", "Office 95" },
+            { "8.0", "Office 97" },
+            { "8.5", "Office 97 Powered by Word 98" },
+            { "9.0", "Office 2000" },
+            { "10.0", "Office XP" },
+            { "11.0", "Office 2003" },
+            { "12.0", "Office 2007" },
+            { "14.0", "Office 2010" },
+            { "15.0", "Office 2013" },
+            { "16.0", "Office 2016" }
+        };
+
+        public static Dictionary<string, string> productNames = new Dictionary<string, string>
+        {
+            { "Word", "winword.exe" },
+            { "Excel", "excel.exe" },
+            { "Outlook", "outlook.exe" },
+            { "PowerPoint", "powerpnt.exe" },
+            { "Access", "msaccess.exe" },
+            { "Visio", "visio.exe" },
+            { "Project", "winproj.exe" },
+            { "Publisher", "mspub.exe" },
+            { "FrontPage", "frontpg.exe" },
+            { "Schedule+", "schdpl32.exe" },
+            { "PhotoDraw", "photodrw.exe" },
+            { "Binder", "binder.exe" },
+            { "Photo Editor", "photoed.exe" },
+            { "MapPoint Deluxe", "mappoint.exe" },
+            { "InfoPath", "infopath.exe" },
+            { "OneNote", "onenote.exe" },
+            { "Communicator", "communicator.exe" },
+            { "Groove/SharePoint Workspace/OneDrive", "groove.exe" },
+            { "SharePoint Designer", "spdesign.exe" },
+        };
+    }
+
+    public enum BinaryType : uint
+    {
+        SCS_32BIT_BINARY = 0, // A 32-bit Windows-based application
+        SCS_64BIT_BINARY = 6, // A 64-bit Windows-based application.
+        SCS_DOS_BINARY = 1, // An MS-DOS – based application
+        SCS_OS216_BINARY = 5, // A 16-bit OS/2-based application
+        SCS_PIF_BINARY = 3, // A PIF file that executes an MS-DOS – based application
+        SCS_POSIX_BINARY = 4, // A POSIX – based application
+        SCS_WOW_BINARY = 2 // A 16-bit Windows-based application 
     }
 }
